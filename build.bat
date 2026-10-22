@@ -8,7 +8,11 @@ if errorlevel 1 (
 )
 
 g++ -std=c++17 -O2 -Wall -Wextra -pedantic ^
-    src\main.cpp src\terminal.cpp src\rain.cpp src\banner.cpp ^
+    src\main.cpp ^
+    src\banner\banner.cpp ^
+    src\rain\rain.cpp ^
+    src\terminal\terminal.cpp ^
+    src\terminal\startup.cpp ^
     -o RainyTerminal.exe
 
 if errorlevel 1 (

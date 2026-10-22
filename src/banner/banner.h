@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "terminal.h"
+#include "../terminal/terminal.h"
 
 // The animated title that is drawn over the rain when the program starts.
 class Banner {

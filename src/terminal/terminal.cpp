@@ -60,19 +60,45 @@ std::u32string toUtf32(std::string_view text) {
     return result;
 }
 
-bool writeText(HANDLE console, std::string_view text) {
+std::string toUtf8(std::wstring_view text) {
     if (text.empty()) {
-        return true;
+        return {};
+    }
+
+    const int length = static_cast<int>(text.size());
+    const int needed = WideCharToMultiByte(CP_UTF8, 0, text.data(), length, nullptr, 0, nullptr, nullptr);
+    if (needed <= 0) {
+        return {};
+    }
+
+    std::string result(static_cast<std::size_t>(needed), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text.data(), length, result.data(), needed, nullptr, nullptr);
+    return result;
+}
+
+std::wstring toWide(std::string_view text) {
+    if (text.empty()) {
+        return {};
     }
 
     const int length = static_cast<int>(text.size());
     const int needed = MultiByteToWideChar(CP_UTF8, 0, text.data(), length, nullptr, 0);
     if (needed <= 0) {
-        return false;
+        return {};
     }
 
-    std::wstring wide(static_cast<std::size_t>(needed), L'\0');
-    if (MultiByteToWideChar(CP_UTF8, 0, text.data(), length, wide.data(), needed) != needed) {
+    std::wstring result(static_cast<std::size_t>(needed), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), length, result.data(), needed);
+    return result;
+}
+
+bool writeText(HANDLE console, std::string_view text) {
+    if (text.empty()) {
+        return true;
+    }
+
+    const std::wstring wide = toWide(text);
+    if (wide.empty()) {
         return false;
     }
 

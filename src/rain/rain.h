@@ -3,7 +3,7 @@
 #include <random>
 #include <vector>
 
-#include "terminal.h"
+#include "../terminal/terminal.h"
 
 // A falling rain streak.
 struct Drop {

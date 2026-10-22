@@ -6,14 +6,16 @@
 #include <chrono>
 #include <cstdio>
 #include <random>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
 
-#include "banner.h"
-#include "rain.h"
-#include "terminal.h"
-#include "version.h"
+#include "banner/banner.h"
+#include "rain/rain.h"
+#include "terminal/startup.h"
+#include "terminal/terminal.h"
+#include "version/version.h"
 
 namespace {
 
@@ -44,6 +46,9 @@ struct Options {
     bool help = false;
     bool version = false;
     bool dumpBanner = false;
+    bool startup = false;   // started by cmd.exe through AutoRun
+    bool install = false;
+    bool uninstall = false;
     bool invalid = false;
     int dumpWidth = 80;
     int dumpHeight = 40;
@@ -53,6 +58,8 @@ void printHelp() {
     std::printf("%s %s\n", kAppName, kAppVersion);
     std::printf("Rain falls in your Windows console.\n\n");
     std::printf("usage: RainyTerminal [options]\n\n");
+    std::printf("  --install             start with every new cmd.exe window\n");
+    std::printf("  --uninstall           undo --install\n");
     std::printf("  --banner=hold         keep the logo on screen\n");
     std::printf("  --banner=once         logo at start, then it dissolves (default)\n");
     std::printf("  --no-banner           do not show the logo\n");
@@ -68,7 +75,13 @@ Options parseOptions(int argc, char** argv) {
     for (int index = 1; index < argc; ++index) {
         const std::string_view argument(argv[index]);
 
-        if (argument == "--no-banner") {
+        if (argument == "--install") {
+            options.install = true;
+        } else if (argument == "--uninstall") {
+            options.uninstall = true;
+        } else if (argument == "--startup") {
+            options.startup = true;
+        } else if (argument == "--no-banner") {
             options.showBanner = false;
         } else if (argument == "--banner" || argument == "--banner=hold") {
             options.showBanner = true;
@@ -98,6 +111,31 @@ Options parseOptions(int argc, char** argv) {
     }
 
     return options;
+}
+
+int runInstall() {
+    std::string message;
+    if (!startup::install(message)) {
+        std::fprintf(stderr, "%s\n", message.c_str());
+        return 1;
+    }
+
+    std::printf("%s\n\n", message.c_str());
+    std::printf("Open a new cmd.exe window to see the rain.\n");
+    std::printf("Press ESC there to get the normal prompt back.\n");
+    std::printf("Run \"RainyTerminal.exe --uninstall\" to remove it again.\n");
+    return 0;
+}
+
+int runUninstall() {
+    std::string message;
+    if (!startup::uninstall(message)) {
+        std::fprintf(stderr, "%s\n", message.c_str());
+        return 1;
+    }
+
+    std::printf("%s\n", message.c_str());
+    return 0;
 }
 
 void printBanner(int width, int height) {
@@ -197,6 +235,12 @@ int main(int argc, char** argv) {
         std::printf("%s %s\n", kAppName, kAppVersion);
         return 0;
     }
+    if (options.install) {
+        return runInstall();
+    }
+    if (options.uninstall) {
+        return runUninstall();
+    }
     if (options.dumpBanner) {
         printBanner(options.dumpWidth, options.dumpHeight);
         return 0;
@@ -204,8 +248,10 @@ int main(int argc, char** argv) {
 
     ConsoleSession console;
     if (!console.ready()) {
-        std::fprintf(stderr, "Rainy Terminal needs a real Windows console.\n");
-        return 1;
+        if (!options.startup) {
+            std::fprintf(stderr, "Rainy Terminal needs a real Windows console.\n");
+        }
+        return options.startup ? 0 : 1;
     }
 
     if (SetConsoleCtrlHandler(onConsoleEvent, TRUE) == 0) {

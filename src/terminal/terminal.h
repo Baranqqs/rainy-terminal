@@ -7,6 +7,9 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0601  // Windows 7 or newer
+#endif
 #include <windows.h>
 
 #include <string>
@@ -50,6 +53,10 @@ void appendUtf8(std::string& text, char32_t codePoint);
 
 // Turns a plain ASCII string into UTF-32 (one code point per cell).
 std::u32string toUtf32(std::string_view text);
+
+// Converts between UTF-16 (the Windows API) and UTF-8 (our strings).
+std::string toUtf8(std::wstring_view text);
+std::wstring toWide(std::string_view text);
 
 // Writes UTF-8 text to the console. The wide API keeps block characters and
 // box drawing characters readable on every code page.

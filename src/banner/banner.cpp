@@ -4,7 +4,7 @@
 #include <array>
 #include <cmath>
 
-#include "version.h"
+#include "../version/version.h"
 
 namespace {
 
