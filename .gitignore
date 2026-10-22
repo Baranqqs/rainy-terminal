@@ -1,0 +1,5 @@
+RainyTerminal.exe
+*.exe
+*.o
+*.obj
+build/
