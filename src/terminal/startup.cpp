@@ -112,6 +112,37 @@ DWORD valueType(DWORD original) {
     return original == REG_EXPAND_SZ ? REG_EXPAND_SZ : REG_SZ;
 }
 
+// Removes every Rainy Terminal command from `value`, even one that points to
+// an older location of the executable. Returns true when something was found.
+//
+// cmd.exe entries are separated by " & ". Our command itself never contains
+// that sequence, so the last separator before the marker is the start of the
+// entry.
+bool removeOurCommands(std::string& value) {
+    constexpr const char* marker = "--startup --banner=hold";
+    const std::string tail(marker);
+    bool removed = false;
+
+    std::size_t position = value.find(tail);
+    while (position != std::string::npos) {
+        std::size_t start = 0;
+        std::size_t end = position + tail.size();
+
+        const std::size_t separator = value.rfind(" & ", position);
+        if (separator != std::string::npos) {
+            start = separator;  // take the separator with the command
+        } else if (value.compare(end, 3, " & ") == 0) {
+            end += 3;           // our command is the first entry
+        }
+
+        value.erase(start, end - start);
+        removed = true;
+        position = value.find(tail);
+    }
+
+    return removed;
+}
+
 }  // namespace
 
 namespace startup {
@@ -131,23 +162,28 @@ bool install(std::string& message) {
     }
 
     const std::string existing = toUtf8(current);
-    if (existing.find(ours) != std::string::npos) {
-        message = "Rainy Terminal is already set up for cmd.exe.";
-        return true;
-    }
 
+    // Drop an entry from an older location before adding the current one.
     std::string next = existing;
+    const bool hadEntry = removeOurCommands(next);
     if (!next.empty()) {
         next += " & ";
     }
     next += ours;
+
+    if (next == existing) {
+        message = "Rainy Terminal is already set up for cmd.exe.";
+        return true;
+    }
 
     if (!writeAutoRun(toWide(next), valueType(type))) {
         message = "Could not write HKCU\\Software\\Microsoft\\Command Processor\\AutoRun.";
         return false;
     }
 
-    message = "Rainy Terminal now starts with every new cmd.exe window.";
+    message = hadEntry
+        ? "Rainy Terminal now starts from its new location."
+        : "Rainy Terminal now starts with every new cmd.exe window.";
     return true;
 }
 
@@ -166,19 +202,9 @@ bool uninstall(std::string& message) {
     }
 
     std::string next = toUtf8(current);
-    const std::size_t position = next.find(ours);
-    if (position == std::string::npos) {
+    if (!removeOurCommands(next)) {
         message = "Rainy Terminal is not set up for cmd.exe.";
         return true;
-    }
-
-    next.erase(position, ours.size());
-
-    // Remove the " & " that install() put in front of our command.
-    if (position >= 3 && next.compare(position - 3, 3, " & ") == 0) {
-        next.erase(position - 3, 3);
-    } else if (next.compare(position, 3, " & ") == 0) {
-        next.erase(position, 3);
     }
 
     const bool ok = next.empty()

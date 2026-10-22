@@ -53,6 +53,9 @@ The setting is stored in `HKCU\Software\Microsoft\Command Processor\AutoRun`
 (no admin rights needed). Scripts that call `cmd /c ...` are skipped, so
 builds and other tools are never blocked by the animation.
 
+If you move the folder, run `--install` again from the new location. The old
+entry is replaced automatically.
+
 ## Options
 
 | Option | What it does |
